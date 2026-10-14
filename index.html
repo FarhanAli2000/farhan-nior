@@ -68,7 +68,32 @@ nav ul a{text-decoration:none;display:inline-block;overflow:hidden;height:1.3em;
 nav ul a span{display:block;transition:transform .5s cubic-bezier(.7,0,.2,1)}
 nav ul a span::after{content:attr(data-t);display:block;color:var(--gold)}
 nav ul a:hover span{transform:translateY(-100%)}
-@media (max-width:760px){nav ul{display:none}}
+/* hamburger (mobile) */
+.burger{display:none}
+@media (max-width:760px){
+  nav .logo{position:relative;z-index:2}
+  .burger{display:grid;place-items:center;position:relative;z-index:2;width:44px;height:44px;padding:0;border-radius:50%;border:1px solid var(--line);background:rgba(7,7,10,.45);color:var(--ivory);cursor:pointer}
+  .burger i{position:absolute;left:50%;top:50%;width:18px;height:1px;margin-left:-9px;background:currentColor;transition:transform .45s cubic-bezier(.7,0,.2,1),opacity .3s}
+  .burger i:nth-child(1){transform:translateY(-6px)}
+  .burger i:nth-child(3){transform:translateY(6px)}
+  nav.open .burger i:nth-child(1){transform:rotate(45deg)}
+  nav.open .burger i:nth-child(2){opacity:0}
+  nav.open .burger i:nth-child(3){transform:rotate(-45deg)}
+  nav.open{backdrop-filter:none;-webkit-backdrop-filter:none}
+  nav ul{position:fixed;inset:0;z-index:1;flex-direction:column;justify-content:center;align-items:center;gap:26px;
+    padding:calc(90px + env(safe-area-inset-top,0px)) 24px calc(40px + env(safe-area-inset-bottom,0px));
+    background:var(--void);font-family:var(--f-display);font-size:1.5rem;letter-spacing:.22em;
+    opacity:0;visibility:hidden;transition:opacity .45s,visibility .45s}
+  nav ul li{transform:translateY(18px);opacity:0;transition:transform .6s cubic-bezier(.2,.8,.2,1),opacity .6s}
+  nav.open ul{opacity:1;visibility:visible}
+  nav.open ul li{transform:none;opacity:1}
+  nav.open ul li:nth-child(2){transition-delay:.05s}
+  nav.open ul li:nth-child(3){transition-delay:.1s}
+  nav.open ul li:nth-child(4){transition-delay:.15s}
+  nav.open ul li:nth-child(5){transition-delay:.2s}
+  html.menu-open{overflow:hidden}
+  html.menu-open .sound{opacity:0;pointer-events:none}
+}
 
 /* hero */
 .hero{position:relative;height:min(100svh,940px);min-height:560px;overflow:hidden;display:grid;place-items:center}
@@ -185,6 +210,7 @@ nav ul a:hover span{transform:translateY(-100%)}
 form.join{display:flex;gap:10px;flex-wrap:wrap;margin-top:40px}
 form.join input{background:transparent;border:1px solid var(--line);border-radius:100px;padding:17px 24px;color:var(--ivory);font:inherit;width:min(340px,100%);min-width:0}
 form.join input:focus{border-color:var(--gold);outline:none}
+@media (max-width:480px){form.join input,form.join .btn{width:100%;justify-content:center}}
 .toast{font-family:var(--f-mono);font-size:.8rem;color:var(--gold);min-height:1.4em;margin-top:14px}
 .sr{position:absolute;left:-9999px}
 
@@ -266,7 +292,8 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px}
 
 <nav id="nav">
   <a class="logo" href="#top">FARHAN <span class="script">noir</span></a>
-  <ul>
+  <button class="burger" id="burger" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="navMenu"><i></i><i></i><i></i></button>
+  <ul id="navMenu">
     <li><a href="#notes"><span data-t="Notes">Notes</span></a></li>
     <li><a href="#editions"><span data-t="Editions">Editions</span></a></li>
     <li><a href="#collection"><span data-t="Collection">Collection</span></a></li>
@@ -597,6 +624,20 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px}
   /* nav */
   addEventListener('scroll',()=>document.getElementById('nav').classList.toggle('solid',scrollY>60),{passive:true});
 
+  /* mobile menu */
+  let lenis;
+  const nav=document.getElementById('nav'),burger=document.getElementById('burger'),menu=document.getElementById('navMenu');
+  function setMenu(open){
+    nav.classList.toggle('open',open);document.documentElement.classList.toggle('menu-open',open);
+    burger.setAttribute('aria-expanded',open);burger.setAttribute('aria-label',open?'Close menu':'Open menu');
+    if(lenis)open?lenis.stop():lenis.start();
+  }
+  burger.addEventListener('click',()=>setMenu(!nav.classList.contains('open')));
+  // capture phase: close (and restart smooth scroll) before the link's own scroll handler runs
+  menu.addEventListener('click',e=>{if(e.target.closest('a'))setMenu(false)},true);
+  addEventListener('keydown',e=>{if(e.key==='Escape'&&nav.classList.contains('open')){setMenu(false);burger.focus()}});
+  matchMedia('(min-width:761px)').addEventListener('change',e=>{if(e.matches)setMenu(false)});
+
   if(typeof gsap==='undefined'||reduce){loader.remove();document.querySelectorAll('.manifesto .w').forEach(w=>w.style.opacity=1);return}
   gsap.registerPlugin(ScrollTrigger);
 
@@ -606,7 +647,6 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px}
   gsap.ticker.add(applyPhoto);
 
   /* smooth scroll */
-  let lenis;
   if(typeof Lenis!=='undefined'){
     lenis=new Lenis({lerp:.08});lenis.on('scroll',ScrollTrigger.update);
     gsap.ticker.add(t=>lenis.raf(t*1000));gsap.ticker.lagSmoothing(0);
